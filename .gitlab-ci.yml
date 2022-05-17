@@ -1,0 +1,62 @@
+variables:
+  REGION: eu-west-1
+
+stages:
+  - build
+  - deploy
+
+build:
+  stage: build
+  image: golang:1.18.2
+  tags:
+    - docker
+  cache:
+    - key:
+        files:
+          - extension.zip
+      paths:
+        - ./bin
+  script:
+    - apt update && apt -y install zip
+    - GOOS=linux GOARCH=amd64 go build -o extensions/extension
+    - mkdir -p bin
+    - zip -r bin/extension.zip extensions/
+
+deploy:
+  stage: deploy
+  image: registry.gitlab.com/gitlab-org/cloud-deploy/aws-base:latest
+  tags:
+    - docker
+  cache:
+    - key:
+        files:
+          - extension.zip
+      paths:
+        - ./bin
+  script:
+    - >
+      STS=($(aws sts assume-role-with-web-identity
+      --role-arn ${ROLE_ARN}
+      --role-session-name "GitLabRunner-${CI_PROJECT_ID}-${CI_PIPELINE_ID}"
+      --web-identity-token $CI_JOB_JWT_V2
+      --duration-seconds 3600
+      --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]'
+      --output text))
+    - export AWS_ACCESS_KEY_ID="${STS[0]}"
+    - export AWS_SECRET_ACCESS_KEY="${STS[1]}"
+    - export AWS_SESSION_TOKEN="${STS[2]}"
+    - aws sts get-caller-identity
+    - >
+      aws lambda publish-layer-version --layer-name loki-lambda-extension --compatible-runtimes
+      nodejs
+      nodejs14.x
+      python3.6
+      python3.7
+      python3.8
+      python3.9
+      dotnet6
+      go1.x
+      provided
+      provided.al2
+      --compatible-architectures x86_64 --region ${REGION} --zip-file "fileb://bin/extension.zip"
+
