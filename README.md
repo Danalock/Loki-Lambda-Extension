@@ -38,6 +38,10 @@ $ ./deploy_custom_and_apply.sh temp-lambda-layer eu-west-1 sandbox my-test-lambd
 
 LOKI_BUFFER_TIMEOUT_MS - in general this should match or be slightly higher than the expected lambdas invocation time. Though this rule may not exactly apply to long runnning lambda instances (60s+), then one might to have a lower timeout value anyway.
 
+## Known issues
+
+Sometimes the log is not at the end of invocation and another invocation (or until lambda instance is shutdown) is needed to flush the previous logs.
+
 ## Potential future improvements
 
 * It would be nice if extension would detect that if it is being invocated many times. Then if so it would not wait to flush the logs on each invocation, but instead buffer the logs and send them every X seconds or so. This could greatly improve the log efficiency for busy lambdas.
