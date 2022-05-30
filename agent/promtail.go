@@ -91,6 +91,7 @@ func (l *LokiLogger) SendLog(log string) error {
 	for _, msg := range logs {
 		var logStr []byte
 		var err error
+
 		if msg.Type == string(logsapi.Function) {
 			logStr, err = json.Marshal(msg.Record)
 		} else {
@@ -99,9 +100,18 @@ func (l *LokiLogger) SendLog(log string) error {
 		if err != nil {
 			return err
 		}
+
+		labelsToSend := make(model.LabelSet)
+		for k, v := range labels {
+			labelsToSend[k] = v
+		}
+
+		logsType := getLambdaLogsType(msg.Type)
+		labelsToSend[model.LabelName("lambda")] = model.LabelValue(logsType)
+
 		logger.Debug("Preparing to send log message: " + string(logStr))
 
-		batch.add(l.ctx, entry{labels, logproto.Entry{
+		batch.add(l.ctx, entry{labelsToSend, logproto.Entry{
 			Line:      string(logStr),
 			Timestamp: parseMessageTimestamp(msg),
 		}})
@@ -113,6 +123,17 @@ func (l *LokiLogger) SendLog(log string) error {
 	}
 
 	return nil
+}
+
+// 'msgType' can contain values like "platform.start".
+// We want to return "platform" in such case
+func getLambdaLogsType(msgType string) string {
+	if idx := strings.IndexByte(msgType, '.'); idx >= 0 {
+		logsType := msgType[:idx]
+		return logsType
+	}
+
+	return msgType
 }
 
 // parseMessageTimestamp is a helper function that tries to parse the timestamp from the
@@ -231,7 +252,7 @@ func sendToPromtail(ctx context.Context, b *batch) error {
 
 		// Only retry 429s, 500s and connection-level errors.
 		if status > 0 && status != 429 && status/100 != 5 {
-			logger.Debug("Send to Loki went well")
+			logger.Debug("Sent to Loki successfully")
 			break
 		}
 

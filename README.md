@@ -38,9 +38,12 @@ $ ./deploy_custom_and_apply.sh temp-lambda-layer eu-west-1 sandbox my-test-lambd
 
 LOKI_BUFFER_TIMEOUT_MS - in general this should match or be slightly higher than the expected lambdas invocation time. Though this rule may not exactly apply to long runnning lambda instances (60s+), then one might to have a lower timeout value anyway.
 
-## Known issues
+## Labels
 
-Sometimes the log is not at the end of invocation and another invocation (or until lambda instance is shutdown) is needed to flush the previous logs.
+These are the labels that extension pushes to the Loki:
+* application - value provided by LOKI_APPLICATION_LABEL env var
+* environment - value provided by LOKI_ENV_LABEL env var
+* lambda - value will be either 'function' or 'platform' based on what sort of log it is
 
 ## Potential future improvements
 
