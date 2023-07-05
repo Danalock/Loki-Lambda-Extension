@@ -10,10 +10,6 @@ This extension:
 
 Note that current implementation always tries to push all the buffered logs at the end of the invocation. This means that there will be some additional time amount needed after the lambda invocation is completed to flush the logs. This should not slow down Lambda response time, but it will add to the billed time. One should look into LOKI_BUFFER_TIMEOUT_MS environment variable to set the most appropriate value for the lambda to optimize this. This implementation makes most sense for Lambdas that don't get invocated to a very high degree (~ <10 times a second).
 
-## Supported architectures
-
-Build CI builds for x86_64 Lambda environments.
-
 ## Extension (itself) logs
 
 Extension is setup to log function and platform logs only. If you need the logs coming from the extension itself, one still needs to look into CloudWatch logs (if enabled) for that or change the implementation to subscribe to extension logs as well. However one should be careful with extension logs to not cause infinite log loops.
